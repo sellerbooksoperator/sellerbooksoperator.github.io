@@ -4305,7 +4305,7 @@ async function loginGoogle(){
       const {data,error}=await sellerBooksSupabase.auth.signInWithOAuth({
         provider:"google",
         options:{
-          redirectTo:"https://sellerbooks-operator.github.io/admin/",
+          redirectTo:"https://sellerbooksoperator.github.io/",
           skipBrowserRedirect:true,
           queryParams:{
             prompt:"select_account"
@@ -4333,11 +4333,7 @@ async function loginGoogle(){
       await sellerBooksSupabase.auth.signInWithOAuth({
         provider:"google",
         options:{
-          redirectTo:
-            location.protocol === "http:" ||
-            location.protocol === "https:"
-              ? location.origin + location.pathname
-              : null,
+          redirectTo:"https://sellerbooksoperator.github.io/",
           queryParams:{
             prompt:"select_account"
           }
