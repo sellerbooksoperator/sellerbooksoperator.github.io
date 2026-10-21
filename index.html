@@ -4091,7 +4091,9 @@ async function sellerBooksEnsureSupabase(){
         flowType:"pkce",
         persistSession:true,
         autoRefreshToken:true,
-        detectSessionInUrl:true
+        /* OAuth PKCE callback ditangani satu kali secara manual di operatorInit().
+           Mencegah auto-detect dan exchangeCodeForSession berlomba memakai code yang sama. */
+        detectSessionInUrl:false
       }
     }
   );
@@ -4591,20 +4593,34 @@ async function operatorInit(){
       const cleanUrl=location.origin+location.pathname+"?desktop=1";
       history.replaceState({},document.title,cleanUrl);
     }catch(e){
-      /*
-        Jangan tampilkan popup di callback. Validasi session di bawah akan
-        menentukan apakah login benar-benar berhasil. Ini mencegah popup
-        PKCE palsu ketika session sudah dibuat oleh Supabase.
-      */
       console.error("OAuth callback exchange gagal:",e);
       const cleanUrl=location.origin+location.pathname+"?desktop=1";
       history.replaceState({},document.title,cleanUrl);
+      const detail=String(e?.message||e||"Tidak diketahui");
+      const msg=document.getElementById("operatorApprovalMessage");
+      if(msg){
+        msg.textContent="Login Google belum berhasil diproses. Silakan klik Masuk dengan Google sekali lagi. Detail: "+detail;
+      }
+      operatorShowLogin();
+      if(msg)msg.textContent="Login Google belum berhasil diproses. Silakan klik Masuk dengan Google sekali lagi. Detail: "+detail;
+      return;
     }
   }
 
   const {data,error}=await sellerBooksSupabase.auth.getSession();
-  if(error){console.error(error);return operatorShowLogin();}
-  if(!data?.session?.user)return operatorShowLogin();
+  if(error){
+    console.error("Membaca session Operator gagal:",error);
+    operatorShowLogin();
+    const msg=document.getElementById("operatorApprovalMessage");
+    if(msg)msg.textContent="Gagal membaca sesi login Google: "+String(error.message||error);
+    return;
+  }
+  if(!data?.session?.user){
+    operatorShowLogin();
+    const msg=document.getElementById("operatorApprovalMessage");
+    if(msg && oauthCode)msg.textContent="Google kembali ke SellerBooks, tetapi sesi login belum terbentuk. Silakan coba lagi. Jika berulang, kirim screenshot pesan ini.";
+    return;
+  }
   sellerBooksAuthUser=data.session.user;
   operatorShowLogin();
   await checkOperatorApproval();
